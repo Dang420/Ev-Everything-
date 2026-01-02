@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en" class=""><head><script>window.livecodes = window.livecodes || {};</script><title>Untitled Project</title><meta name="title" content="Untitled Project"><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="./style.css"><script src="https://cdn.jsdelivr.net/npm/es-module-shims@1.10.0/dist/es-module-shims.js" async=""></script><script type="importmap">{
+  "imports": {}
+}</script></head><body>
+
+  
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Charge Finder</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+      :root {
+        --primary: #00b894; /* Fresh green for all EVs (eco-friendly) */
+        --primary-dark: #009f7f;
+        --accent: #55efc4;
+        --bg-gradient: linear-gradient(135deg, #e0f7fa, #c8facc);
+        --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        --text-dark: #2d3436;
+        --text-light: #636e72;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: var(--bg-gradient);
+        color: var(--text-dark);
+        min-height: 100vh;
+      }
+
+      #header {
+        background: linear-gradient(
+          to right,
+          var(--primary),
+          var(--primary-dark)
+        );
+        color: white;
+        padding: 40px 20px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        position: relative;
+        overflow: hidden;
+      }
+
+      #header::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("https://images.unsplash.com/photo-1620715745643-675dd20f68bc?ixlib=rb-4.0.3&auto=format&fit=crop&q=80")
+          center/cover no-repeat;
+        opacity: 0.2;
+        z-index: 0;
+      }
+
+      .header-content {
+        position: relative;
+        z-index: 1;
+      }
+
+      #header h1 {
+        margin: 0;
+        font-size: 3em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+
+      #header p {
+        margin: 15px 0 0;
+        font-size: 1.4em;
+        opacity: 0.95;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      #search-container {
+        padding: 30px 20px;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(10px);
+      }
+
+      #search-input {
+        width: 60%;
+        max-width: 500px;
+        padding: 14px 20px;
+        font-size: 1.1em;
+        border: none;
+        border-radius: 50px 0 0 50px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        outline: none;
+      }
+
+      #search-button {
+        padding: 14px 30px;
+        font-size: 1.1em;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 0 50px 50px 0;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        transition: background 0.3s;
+      }
+
+      #search-button:hover {
+        background: var(--primary-dark);
+      }
+
+      #map {
+        height: 600px;
+        width: 100%;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: var(--card-shadow);
+        margin: 20px auto;
+        max-width: 1200px;
+      }
+
+      #stations-list {
+        padding: 40px 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      #stations-list h2 {
+        text-align: center;
+        font-size: 2em;
+        margin-bottom: 30px;
+        color: var(--primary-dark);
+      }
+
+      .station-item {
+        background: white;
+        padding: 20px;
+        margin: 15px 0;
+        border-radius: 15px;
+        box-shadow: var(--card-shadow);
+        transition:
+          transform 0.3s,
+          box-shadow 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .station-item:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+      }
+
+      .station-icon {
+        font-size: 3em;
+        color: var(--primary);
+        flex-shrink: 0;
+      }
+
+      .station-info h3 {
+        margin: 0 0 8px;
+        color: var(--primary-dark);
+        font-size: 1.4em;
+      }
+
+      .station-info p {
+        margin: 6px 0;
+        color: var(--text-light);
+      }
+
+      .fast-charger {
+        color: var(--primary);
+        font-weight: bold;
+      }
+      .status-available {
+        color: #00b894;
+        font-weight: bold;
+      }
+      .status-limited {
+        color: #fdcb6e;
+        font-weight: bold;
+      }
+      .status-unavailable {
+        color: #d63031;
+        font-weight: bold;
+      }
+
+      .loader {
+        text-align: center;
+        padding: 40px;
+        font-size: 1.2em;
+        color: var(--primary);
+      }
+
+      @media (max-width: 768px) {
+        #search-input {
+          width: 70%;
+        }
+        #header h1 {
+          font-size: 2.2em;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .station-item {
+          flex-direction: column;
+          text-align: center;
+        }
+      }
+    </style>
+  
+  
+    <div id="header">
+      <div class="header-content">
+        <h1>
+          <i class="fas fa-bolt"></i> EV Charge Finder
+          <i class="fas fa-plug"></i>
+        </h1>
+        <p>
+          Find charging stations for ALL electric vehicles – Tesla, Hyundai,
+          Ford, Chevy, Nissan, Rivian, and more!
+        </p>
+      </div>
+    </div>
+
+    <div id="search-container">
+      <input type="text" id="search-input" placeholder="Enter city, address, or zip (e.g., Chicago, IL)">
+      <button id="search-button">
+        <i class="fas fa-search"></i> Find Chargers
+      </button>
+    </div>
+
+    <div id="map"></div>
+
+    <div id="stations-list">
+      <div class="loader" id="loader">
+        Locating nearby EV charging stations...
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      // FREE API KEY RECOMMENDED → Sign up at https://openchargemap.org/site/register
+      const OCM_API_KEY = 'YOUR_API_KEY_HERE';
+
+      let map;
+      let markers = [];
+
+      function initMap(lat = 37.7749, lng = -122.4194) {
+          if (map) map.remove();
+
+          map = L.map('map').setView([lat, lng], 13);
+
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '&copy; OpenStreetMap contributors'
+          }).addTo(map);
+
+          const evIcon = L.divIcon({
+              className: 'custom-marker',
+              html: '<i class="fas fa-charging-station" style="font-size:28px;color:#00b894;"></i>',
+              iconSize: [35, 35],
+              iconAnchor: [17, 35]
+          });
+
+          window.evIcon = evIcon;
+      }
+
+      function clearMarkers() {
+          markers.forEach(m => map.removeLayer(m));
+          markers = [];
+      }
+
+      async function fetchStations(lat, lng) {
+          // All major connectors: J1772, Type 2, CCS, CHAdeMO, NACS/Tesla, etc.
+          let url = `https://api.openchargemap.io/v3/poi/?latitude=\( {lat}&longitude= \){lng}&distance=20&maxresults=50&compact=true&verbose=false`;
+
+          if (OCM_API_KEY && OCM_API_KEY !== 'apikey_61TuR0DYvOWPp79hF26TuQB9PeSQwl4Rg3aCt8Aa09rM') {
+              url += `&key=${OCM_API_KEY}`;
+          }
+
+          try {
+              const res = await fetch(url);
+              if (!res.ok) throw new Error('API error');
+              return await res.json();
+          } catch (err) {
+              console.error(err);
+              alert('Unable to load stations – get a free API key at openchargemap.org for best results');
+              return [];
+          }
+      }
+
+      // Rest of functions unchanged except displayStations for fast charger badge
+      async function geocodeAddress(address) {
+          const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`;
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.length > 0) {
+              return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+          }
+          throw new Error('Not found');
+      }
+
+      function getStatusClass(statusTitle) {
+          if (!statusTitle) return '';
+          const lower = statusTitle.toLowerCase();
+          if (lower.includes('operational') || lower.includes('available')) return 'status-available';
+          if (lower.includes('limited') || lower.includes('partially')) return 'status-limited';
+          return 'status-unavailable';
+      }
+
+      function hasFastCharging(connections) {
+          return connections.some(c => c.PowerKW && c.PowerKW > 50);
+      }
+
+      function displayStations(stations, centerLat, centerLng) {
+          document.getElementById('loader').style.display = 'none';
+          clearMarkers();
+
+          const list = document.getElementById('stations-list');
+          let heading = list.querySelector('h2');
+          if (!heading) {
+              heading = document.createElement('h2');
+              list.insertBefore(heading, list.firstChild);
+          }
+          heading.textContent = `Found ${stations.length} EV Charging Stations Nearby`;
+
+          if (stations.length === 0) {
+              list.innerHTML += '<p style="text-align:center;">No stations found – try a bigger city!</p>';
+              return;
+          }
+
+          stations.forEach(station => {
+              const addr = station.AddressInfo;
+              const connections = station.Connections || [];
+              const status = station.StatusType ? station.StatusType.Title : 'Unknown';
+              const isFast = hasFastCharging(connections);
+
+              const marker = L.marker([addr.Latitude, addr.Longitude], { icon: window.evIcon }).addTo(map);
+              marker.bindPopup(`
+                  <b>${addr.Title}</b><br>
+                  ${addr.AddressLine1}, ${addr.Town}<br>
+                  <strong>Status:</strong> <span class="\( {getStatusClass(status)}"> \){status}</span><br>
+                  ${isFast ? '<strong class="fast-charger">⚡ Fast Charging Available</strong><br>' : ''}
+                  Connectors: \( {connections.map(c => c.ConnectionType.Title + (c.PowerKW ? ` ( \){c.PowerKW} kW)` : '')).join('<br>')}
+              `);
+              markers.push(marker);
+
+              const item = document.createElement('div');
+              item.className = 'station-item';
+              item.innerHTML = `
+                  <div class="station-icon"><i class="fas fa-charging-station"></i></div>
+                  <div class="station-info">
+                      <h3>${addr.Title} ${isFast ? '<span class="fast-charger">⚡ Fast Charger</span>' : ''}</h3>
+                      <p><i class="fas fa-map-marker-alt"></i> ${addr.AddressLine1}, \( {addr.Town} \){addr.Postcode ? ', ' + addr.Postcode : ''}</p>
+                      <p><i class="fas fa-info-circle"></i> <strong>Status:</strong> <span class="\( {getStatusClass(status)}"> \){status}</span></p>
+                      <p><i class="fas fa-plug"></i> \( {connections.map(c => ` \){c.ConnectionType.Title} (${c.PowerKW ? c.PowerKW + ' kW' : 'Any power'})`).join(' • ')}</p>
+                      <p><i class="fas fa-road"></i> Distance: ~${Math.round(addr.Distance)} km</p>
+                  </div>
+              `;
+              list.appendChild(item);
+          });
+
+          map.setView([centerLat, centerLng], 12);
+      }
+
+      // Location, search, and init functions same as before...
+      function getUserLocation() {
+          document.getElementById('loader').style.display = 'block';
+          if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(async pos => {
+                  const { latitude: lat, longitude: lng } = pos.coords;
+                  initMap(lat, lng);
+                  const stations = await fetchStations(lat, lng);
+                  displayStations(stations, lat, lng);
+              }, () => {
+                  initMap();
+                  fallbackLoad();
+              });
+          } else {
+              initMap();
+              fallbackLoad();
+          }
+      }
+
+      async function fallbackLoad() {
+          const stations = await fetchStations(37.7749, -122.4194);
+          displayStations(stations, 37.7749, -122.4194);
+      }
+
+      async function searchStations() {
+          const query = document.getElementById('search-input').value.trim();
+          if (!query) return alert('Please enter a location');
+          document.getElementById('loader').style.display = 'block';
+          document.getElementById('stations-list').innerHTML = '<div class="loader" id="loader">Searching...</div>';
+
+          try {
+              const coords = await geocodeAddress(query);
+              initMap(coords.lat, coords.lng);
+              const stations = await fetchStations(coords.lat, coords.lng);
+              displayStations(stations, coords.lat, coords.lng);
+          } catch {
+              alert('Location not found');
+              document.getElementById('loader').style.display = 'none';
+          }
+      }
+
+      initMap();
+      getUserLocation();
+
+      document.getElementById('search-button').addEventListener('click', searchStations);
+      document.getElementById('search-input').addEventListener('keypress', e => {
+          if (e.key === 'Enter') searchStations();
+      });
+    </script>
+  
+
+<script src="./script.js"></script></body></html>
